@@ -1,5 +1,16 @@
 ---
+all:
+  hosts:
+    centos-host:
+      ansible_connection: docker
+      ansible_user: root
+      vector_version: "0.21.0"
+      vector_install_dir: "/opt/vector"
+
 clickhouse:
   hosts:
-    clickhouse-01:
-      ansible_host: <IP_here>
+    centos-host:
+
+vector:
+  hosts:
+    centos-host:
