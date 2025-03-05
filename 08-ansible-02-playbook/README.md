@@ -57,11 +57,11 @@ vector_install_dir	Директория установки Vector
 
 
 Используемые теги
-
+```
 Тег  	Описание
 clickhouse	Устанавливает и настраивает ClickHouse.
 vector	Устанавливает и настраивает Vector.
 config	Применяет конфигурацию для Vector.
 database	Создаёт базу данных в ClickHouse.
-
+```
 ---
