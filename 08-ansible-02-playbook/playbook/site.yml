@@ -32,5 +32,65 @@
     - name: Create database
       ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
       register: create_db
-      failed_when: create_db.rc != 0 and create_db.rc !=82
+      failed_when: create_db.rc != 0 and create_db.rc != 82
       changed_when: create_db.rc == 0
+
+- name: Install and configure Vector
+  hosts: vector
+  handlers:
+    - name: Restart vector service
+      become: true
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+  tasks:
+    - name: Download Vector
+      ansible.builtin.get_url:
+        url: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-x86_64-unknown-linux-gnu.tar.gz"
+        dest: "/tmp/vector-{{ vector_version }}.tar.gz"
+        tmp_dest: "/tmp"
+
+    - name: Check if Vector archive exists
+      ansible.builtin.stat:
+        path: "/tmp/vector-{{ vector_version }}.tar.gz"
+      register: vector_archive
+
+    - name: Create Vector installation directory
+      ansible.builtin.file:
+        path: "{{ vector_install_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Extract Vector
+      ansible.builtin.unarchive:
+        src: "/tmp/vector-{{ vector_version }}.tar.gz"
+        dest: "{{ vector_install_dir }}"
+        remote_src: true
+      when: vector_archive.stat.exists
+
+    - name: Deploy Vector config
+      ansible.builtin.template:
+        src: vector.j2
+        dest: /etc/vector/vector.toml
+        mode: '0644'
+      notify: Restart vector service
+
+    - name: Ensure Vector service file exists
+      become: true
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/vector.service
+        content: |
+          [Unit]
+          Description=Vector
+          After=network.target
+
+          [Service]
+          ExecStart={{ vector_install_dir }}/vector --config /etc/vector/vector.toml
+          Restart=always
+          User=root
+          Group=root
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      notify: Restart vector service
